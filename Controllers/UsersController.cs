@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Humanizer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NuGet.Versioning;
 using Sample_DTR_API.DTO;
 using Sample_DTR_API.Models;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Sample_DTR_API.Controllers
 {
@@ -23,10 +27,24 @@ namespace Sample_DTR_API.Controllers
         {
             try
             {
-                var users = await _sampleDtrDbContext.UserCredentials.Select(u => new GetUserDTO
-                {
-                    Username = u.Username,
-                }).ToListAsync();
+                var users = await (from employees in _sampleDtrDbContext.Employees
+                                   join departments in _sampleDtrDbContext.Departments on employees.DepartmentId equals departments.DepartmentId
+                                   join roles in _sampleDtrDbContext.Roles on employees.RoleId equals roles.RoleId
+                                   join statuses in _sampleDtrDbContext.Statuses on employees.StatusId equals statuses.StatusId
+                                   join usercredentials in _sampleDtrDbContext.UserCredentials on employees.UserId equals usercredentials.UserId
+                                   select new GetUserDTO
+                                   {
+                                       EmpId = employees.EmpId,
+                                       FirstName = employees.FirstName,
+                                       Mi = employees.Mi + ".",
+                                       LastName = employees.LastName,
+                                       DateOfBirth = employees.DateOfBirth,
+                                       Email = employees.Email,
+                                       Department = departments.DepartmentName,
+                                       Role = roles.Role1,
+                                       Status = statuses.Status1,
+                                       Username = usercredentials.Username,
+                                   }).ToListAsync();
 
                 if (users == null)
                 {
@@ -41,21 +59,49 @@ namespace Sample_DTR_API.Controllers
         }
 
         [HttpGet]
-        [Route("GetUserByName/{username}")]
-        public async Task<ActionResult<GetUserDTO>> GetUserByUserName(string username)
+        [Route("GetUserByUsernameOrName/{searchValue}")]
+        public async Task<ActionResult<GetUserDTO>> GetUserByUserName(String searchValue)
         {
             try
             {
-                var user = await _sampleDtrDbContext.UserCredentials.Select(u => new GetUserDTO
-                {
-                    Username = u.Username
-                }).Where(x=>x.Username == username).ToListAsync();
+                //var searchParts = searchValue.Split(' ');
 
-                if (user == null)
+                //var searchLength = searchParts.Length;
+
+                //for (int i = 0; i < searchLength; i++)
+                //{
+
+
+
+                //    Console.WriteLine(result);
+
+
+                //}
+
+                var result = await (from employees in _sampleDtrDbContext.Employees
+                                    join departments in _sampleDtrDbContext.Departments on employees.DepartmentId equals departments.DepartmentId
+                                    join roles in _sampleDtrDbContext.Roles on employees.RoleId equals roles.RoleId
+                                    join statuses in _sampleDtrDbContext.Statuses on employees.StatusId equals statuses.StatusId
+                                    join usercredentials in _sampleDtrDbContext.UserCredentials on employees.UserId equals usercredentials.UserId
+                                    select new GetUserDTO
+                                    {
+                                        EmpId = employees.EmpId,
+                                        FirstName = employees.FirstName,
+                                        Mi = employees.Mi + ".",
+                                        LastName = employees.LastName,
+                                        DateOfBirth = employees.DateOfBirth,
+                                        Email = employees.Email,
+                                        Department = departments.DepartmentName,
+                                        Role = roles.Role1,
+                                        Status = statuses.Status1,
+                                        Username = usercredentials.Username,
+                                    }).Where(x => x.Username == searchValue || x.Username == searchValue.Trim() || (x.FirstName + " " + x.LastName).Contains(searchValue)).ToListAsync();
+
+                if (result != null)
                 {
-                    return NotFound();
+                    return Ok(result);
                 }
-                return Ok(user);
+                return NotFound();
             }
             catch (Exception ex)
             {
