@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Sample_DTR_API.DTO
 {
-    public partial class RegisterDTO
+    public partial class RegisterUserDTO
     {
         //Employee entity
         public string FirstName { get; set; } = null!;

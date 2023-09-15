@@ -105,7 +105,7 @@ namespace Sample_DTR_API.Controllers
 
         [HttpPost]
         [Route("RegisterUser")]
-        public async Task<IActionResult> Register(RegisterDTO registerDTO)
+        public async Task<IActionResult> Register(RegisterUserDTO registerDTO)
         {
             try
             {
@@ -113,9 +113,15 @@ namespace Sample_DTR_API.Controllers
 
                 //Get the role from the Departments model
                 registerDTO.DepartmentName = _sampleDtrDbContext.Departments.FirstOrDefaultAsync(x => x.DepartmentName == registerDTO.DepartmentName).Result?.DepartmentName;
+                var DepartmentId = _sampleDtrDbContext.Departments.Where(x => x.DepartmentName == registerDTO.DepartmentName).First().DepartmentId;
 
                 //Get the role from the Role model
                 registerDTO.Role1 = _sampleDtrDbContext.Roles.FirstOrDefaultAsync(x => x.Role1 == registerDTO.Role1).Result?.Role1;
+                var RoleId = _sampleDtrDbContext.Roles.Where(x => x.Role1 == registerDTO.Role1).First().RoleId;
+
+                //Get the status from the Status model
+                registerDTO.Status1 = _sampleDtrDbContext.Statuses.FirstOrDefaultAsync(x => x.Status1 == registerDTO.Status1).Result?.Status1;
+                var StatusId = _sampleDtrDbContext.Statuses.Where(x => x.Status1 == (registerDTO.Status1 != null ? registerDTO.Status1 : "Active")).First().StatusId;
 
                 //Mapping data to UserCredential model
                 var userCredential = new UserCredential();
@@ -127,6 +133,11 @@ namespace Sample_DTR_API.Controllers
 
                 //Check if the employee's exact name is already taken
                 var checkEmployeeName = await _sampleDtrDbContext.Employees.Where(x => x.FirstName == registerDTO.FirstName && x.Mi == registerDTO.Mi && x.LastName == registerDTO.LastName).ToListAsync();
+
+                if (registerDTO.Mi.Length > 1)
+                {
+                    return BadRequest("Middle Initial must be only one letter");
+                }
 
                 if (checkUserCredentials.Any())
                 {
@@ -146,6 +157,10 @@ namespace Sample_DTR_API.Controllers
                     {
                         return NotFound("Role not found");
                     }
+                    else if (registerDTO.Status1 == null) //Check if the role selected exists
+                    {
+                        return NotFound("Status not found");
+                    }
                     else if (checkEmployeeName.Any())
                     {
                         return BadRequest("Employee name is already registered!");
@@ -154,37 +169,45 @@ namespace Sample_DTR_API.Controllers
                     {
                         return BadRequest("Registration failed");
                     }
-
-                    //Mapping data to Employee model
-                    var employee = new Employee()
-                    {
-                        FirstName = registerDTO.FirstName,
-                        LastName = registerDTO.LastName,
-                        Mi = registerDTO.Mi,
-                        DateOfBirth = Convert.ToDateTime(registerDTO.DateOfBirth.ToShortDateString()),
-                        Email = registerDTO.Email,
-                        DepartmentId = Convert.ToInt32(_sampleDtrDbContext.Departments.FirstOrDefault(x => x.DepartmentName == registerDTO.DepartmentName)?.DepartmentId),
-                        RoleId = Convert.ToInt32(_sampleDtrDbContext.Roles.FirstOrDefault(x => x.Role1 == registerDTO.Role1)?.RoleId),
-                        StatusId = Convert.ToInt32(_sampleDtrDbContext.Statuses.FirstOrDefault(x => x.Status1 == "Active")?.StatusId),
-                        UserId = Convert.ToInt32(_sampleDtrDbContext.UserCredentials.FirstOrDefaultAsync(x => x.Username == registerDTO.Username && x.Password == registerDTO.Password).Result?.UserId),
-                    };
-
-                    Console.WriteLine(employee);
-
-                    //Adding the new user to the model then saving the changes
-                    await _sampleDtrDbContext.Employees.AddAsync(employee);
-                    _sampleDtrDbContext.Employees.Entry(employee).State = EntityState.Added;
-                    var result = await _sampleDtrDbContext.SaveChangesAsync();
-
-                    if (result != 0)
-                    {
-                        //Show a message back to the user
-                        return Ok("User successfully registered");
-                    }
                     else
                     {
-                        await _sampleDtrDbContext.UserCredentials.Where(x => x.UserId == userCredential.UserId).ExecuteDeleteAsync();
+                        //Get user ID from the UserCredential model
+                        var UserId = _sampleDtrDbContext.UserCredentials.FirstOrDefaultAsync(x => x.Username == registerDTO.Username && x.Password == registerDTO.Password).Result?.UserId;
+
+
+                        //Mapping data to Employee model
+                        var employee = new Employee()
+                        {
+                            FirstName = registerDTO.FirstName,
+                            LastName = registerDTO.LastName,
+                            Mi = registerDTO.Mi,
+                            DateOfBirth = Convert.ToDateTime(registerDTO.DateOfBirth.ToShortDateString()),
+                            Email = registerDTO.Email,
+                            DepartmentId = Convert.ToInt32(DepartmentId),
+                            RoleId = Convert.ToInt32(RoleId),
+                            StatusId = Convert.ToInt32(StatusId),
+                            UserId = Convert.ToInt32(UserId),
+                        };
+
+                        Console.WriteLine(employee);
+
+                        //Adding the new user to the model then saving the changes
+                        await _sampleDtrDbContext.Employees.AddAsync(employee);
+                        //_sampleDtrDbContext.Employees.Entry(employee).State = EntityState.Added;
+                        var result = await _sampleDtrDbContext.SaveChangesAsync();
+                        //var result = 1;
+
+                        if (result != 0)
+                        {
+                            //Show a message back to the user
+                            return Ok("User successfully registered");
+                        }
+                        else
+                        {
+                            await _sampleDtrDbContext.UserCredentials.Where(x => x.UserId == userCredential.UserId).ExecuteDeleteAsync();
+                        }
                     }
+
                     return BadRequest("User registration unsuccessful");
                 }
             }
