@@ -64,42 +64,36 @@ namespace Sample_DTR_API.Controllers
         {
             try
             {
-                //var searchParts = searchValue.Split(' ');
+                var searchParts = searchValue.Split(' ');
 
-                //var searchLength = searchParts.Length;
-
-                //for (int i = 0; i < searchLength; i++)
-                //{
-
-
-
-                //    Console.WriteLine(result);
-
-
-                //}
-
-                var result = await (from employees in _sampleDtrDbContext.Employees
-                                    join departments in _sampleDtrDbContext.Departments on employees.DepartmentId equals departments.DepartmentId
-                                    join roles in _sampleDtrDbContext.Roles on employees.RoleId equals roles.RoleId
-                                    join statuses in _sampleDtrDbContext.Statuses on employees.StatusId equals statuses.StatusId
-                                    join usercredentials in _sampleDtrDbContext.UserCredentials on employees.UserId equals usercredentials.UserId
-                                    select new GetUserDTO
-                                    {
-                                        EmpId = employees.EmpId,
-                                        FirstName = employees.FirstName,
-                                        Mi = employees.Mi + ".",
-                                        LastName = employees.LastName,
-                                        DateOfBirth = employees.DateOfBirth,
-                                        Email = employees.Email,
-                                        Department = departments.DepartmentName,
-                                        Role = roles.Role1,
-                                        Status = statuses.Status1,
-                                        Username = usercredentials.Username,
-                                    }).Where(x => x.Username == searchValue || x.Username == searchValue.Trim() || (x.FirstName + " " + x.LastName).Contains(searchValue)).ToListAsync();
-
-                if (result != null)
+                for (int i = 0; i < searchParts.Length; i++)
                 {
-                    return Ok(result);
+
+                    var result = await (from employees in _sampleDtrDbContext.Employees
+                                        join departments in _sampleDtrDbContext.Departments on employees.DepartmentId equals departments.DepartmentId
+                                        join roles in _sampleDtrDbContext.Roles on employees.RoleId equals roles.RoleId
+                                        join statuses in _sampleDtrDbContext.Statuses on employees.StatusId equals statuses.StatusId
+                                        join usercredentials in _sampleDtrDbContext.UserCredentials on employees.UserId equals usercredentials.UserId
+                                        select new GetUserDTO
+                                        {
+                                            EmpId = employees.EmpId,
+                                            FirstName = employees.FirstName,
+                                            Mi = employees.Mi + ".",
+                                            LastName = employees.LastName,
+                                            DateOfBirth = employees.DateOfBirth,
+                                            Email = employees.Email,
+                                            Department = departments.DepartmentName,
+                                            Role = roles.Role1,
+                                            Status = statuses.Status1,
+                                            Username = usercredentials.Username,
+                                        }).Where(x => x.Username == searchValue || x.Username == searchValue.Trim() || (x.FirstName + " " + x.LastName).Contains(searchParts[i])).ToListAsync();
+
+
+
+                    if (result != null)
+                    {
+                        return Ok(result);
+                    }
                 }
                 return NotFound();
             }
